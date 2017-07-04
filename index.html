@@ -1,0 +1,316 @@
+<!DOCTYPE xhtml>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<meta charset="ISO-8859-1"> 
+<head>
+    <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background: #fff;
+        }
+        #chart {
+            height: 99%;
+            float: left;
+            position: absolute;
+            width: calc(80% - 45px);
+        }
+        a {
+            text-decoration: none;
+			color: #F60;
+        }
+		a:hover {
+            text-decoration: underline;
+			color: #F60;
+        }
+        .pagetitle {
+            height: 30px;
+            color: #03F;
+            font-size: 20px;
+            line-height: 30px;
+            text-align: center;
+            font-weight: bold;
+            font-style: oblique
+        }
+        .node rect {
+            cursor: move;
+            fill-opacity: .9;
+            shape-rendering: crispEdges
+        }
+        .node text {
+            pointer-events: none;
+            text-shadow: 0 1px 0 #fff
+        }
+        .link {
+            stroke: #000;
+            stroke-opacity: .3;
+        }
+        .link:hover {
+            stroke-opacity: .7;
+        }
+        #titlebar {
+				width: calc(80% - 90px);
+				height: 30px;
+            border-bottom: ridge;
+            border-color: #03F;;
+            padding-bottom: 5px;
+            margin-left: 40px;
+            margin-top: 5px;
+            position: fixed;
+            z-index: 50;
+        }
+        #titlebar-right {
+            right: calc(20% + 50px);
+            height: 30px;
+            padding-bottom: 5px;
+            margin-left: 40px;
+            margin-top: 5px;
+            position: fixed;
+            z-index: 50;
+        }
+        .dragdealer {
+            height: 30px;
+            background: #EEE;
+            z-index: 50;
+        }
+        .dragdealer .handle {
+            top: 0;
+            left: 0;
+            cursor: pointer;
+        }
+        .dragdealer .red-bar {
+            width: 100px;
+            height: 30px;
+            background: #F80;
+            color: #FFF;
+            font-size: 20px;
+            line-height: 30px;
+            text-align: center;
+            font-weight: bold;
+            font-style: oblique
+        }
+        .dragdealer .red-bar:hover {
+            background: #F60
+        }
+        .dragdealer .orange-bar {
+            width: 25px;
+            height: 18px;
+            background: #F80;
+            color: #FFF;
+            font-size: 18px;
+            line-height: 16px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .dragdealer .orange-bar:hover {
+            background: #F60
+        }
+        .dragdealer .disabled {
+            background: #898989
+        }
+		
+		.likeform input {
+			width:100%; 
+			min-width:220px;
+			margin-top:5px;
+		}
+		.likeform2 input {
+			width: calc(100% - 13px);
+			min-width:207px;
+		}
+		#pngdownloadwrapper:hover{
+			cursor:pointer;
+			text-decoration:underline;
+		}
+    </style>
+    <script src="js/dragdealer.js"></script>
+    <script src="js/d3.v3.min.js"></script>
+    <script src="js/svgexport.js"></script>
+    <script>
+        var sizecorrection = Math.max(0, 220 - parseInt(window.innerWidth * 0.2));
+        function checksize() {
+            if ((window.innerWidth < 600) || (window.innerHeight < 300)) {
+                alert("The recommended minimum resolution is 600 x 300.\n Yours is " + window.innerWidth + " x " + window.innerHeight + ".");
+            }
+		}
+		window.onresize = function() {
+			window.location.reload();
+		}
+    </script>
+   </head>
+<body onload="checksize();">
+	
+    <!--TITLELBAR-->
+
+    <div id="titlebar">
+		<span id="titletext" class="pagetitle">Intel Nervana Neural Network Designer</span>
+        <span id="titletext" class="pagetitle" style="positions:relative;float:right;right:30px;top:0px;"><a href="https://www.intelnervana.com/" target="_blank">Help</a>&nbsp;|
+		<span id="titletext" class="pagetitle"><a href="#" onclick="alert('Intel Nervana Neural Network Designer by Tony Reina;\nBased on Sankey Diagram Generator by D&egrave;nes Csala (http://sankey.csaladen.es);\nBased on the Sankey plugin for D3 by Mike Bostock;\nMIT License, 2014.');">Cite</a></span>
+    </div>
+	
+	
+	<!--PAGE WRAPPER-->
+
+    <div id="content" style="opacity:1;">
+
+
+        <!--SANKEY DIAGRAM CONTROLS-->
+
+        <div id="sourcecontrol" style="float:right; margin-right:10px; width:20%; margin-top:10px; min-width:220px; border-left:solid; border-color:#EEE; height:98%; padding-left:20px;line-height:26px;z-index:600000;">
+			
+            <!--LOAD-->
+
+			<div id="load" style="position:fixed;float:left;width:inherit;height:100%;background:#fff;color:#000;opacity:0;margin-top:0px;margin-left:0px;z-index:-1;">
+				<div>Please paste the Sankey string below:</div>
+				<textarea id="loadtext" style="margin-top:20px;margin-bottom:20px;width:97%;height:50%;"/></textarea> 
+				<div>
+					<button onclick="loadsubmit();">Done</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+					<span style="font-size:12px;">
+						<input title="Ignore fixed node positions on canvas, if provided" type="checkbox" id="ignorelayout">
+						<label for="ignorelayout">ignore layout</label>
+					</span>
+				</div>
+			</div>
+			
+			<!--SAVE-->
+
+			<div id="save" style="position:fixed;float:left;width:inherit;height:100%;background:#fff;color:#000;opacity:0;margin-top:0px;margin-left:0px;z-index:-1;">
+				<div>Please copy and save the text below to load later:</div>
+				<textarea id="savetext" style="margin-top:20px;margin-bottom:20px;width:97%;height:50%;"/></textarea> 
+				<div>
+					<button onclick="d3.select('#save').transition().style('opacity',0).style('z-index',-1)">Done</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+					<span style="font-size:12px;">
+						<input title="Save node positions on canvas" type="checkbox" id="fixedlayout" onclick="save();">
+						<label for="fixedlayout">save layout</label>
+					</span>
+				</div>
+				<br/>
+				<div id="pngdownloadwrapper">Save image</div>
+			</div>
+			
+			<!--INCREMENTAL-->
+			
+            <div style="display:block;overflow: hidden;white-space: nowrap;"><span style="float:left;">Move nodes:</span>
+                <div style="float:right; padding-right:0; margin-right:0;">
+                    <div style="font-size:20px;font-weight:bold;line-height:10px;">
+                        <input title="Enable horizontal node dragging" type="checkbox" id="xmove" checked>
+                        <label for="xmove">&harr;</label>
+                        <img alt="" style="width:5px;height:0px;">
+                        <input title="Enable vertical node dragging" type="checkbox" id="ymove" checked>
+                        <label for="ymove">&#8597;</label>
+                    </div>
+                </div>
+            </div>
+			<div style="display:block;overflow: hidden;white-space: nowrap;"><span style="float:left;">Label nodes:</span>
+                <div style="float:right; padding-right:0; margin-right:0;" onclick="draw();">
+                    <div style="font-size:10px;">
+                        <input title="Show node value sums" type="checkbox" id="vlabel" checked>
+                        <label for="vlabel">value&nbsp;&nbsp;</label>
+                        <img alt="" style="width:2px;height:0px;">
+                        <input title="Show node labels" type="checkbox" id="tlabel" checked>
+                        <label for="tlabel">text</label>
+						<img alt="" style="width:2px;height:0px;">
+                        <input title="Show node count balances" type="checkbox" id="clabel">
+                        <label for="clabel">count</label>
+                    </div>
+                </div>
+            </div>
+            <div style="display:block;overflow: hidden;white-space: nowrap;"><span style="float:left;">Density:</span>
+                <div style="float:right;">
+                    <div id="pslider" title="Drag slider to set diagram node padding" class="dragdealer" style="margin-top:2px;margin-left:-130px;width:130px; height:18px; position:absolute;">
+                        <div class="handle orange-bar">&harr;
+                            <script>
+                                var densityslider = new Dragdealer("pslider", {
+                                    x: 0.5,
+                                    steps: 5,
+                                    snap: true,
+                                    callback: function(a, b) {
+                                        padding = paddingmultiplier * (1 - a) + 3;
+                                        draw()
+                                    }
+                                });
+                            </script>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div style="display:block;overflow: hidden;white-space: nowrap;"><span style="float:left;">Opacity:</span>
+                <div style="float:right;">
+                    <div id="oslider" title="Drag slider to set diagram flow opacities" class="dragdealer" style="margin-top:2px;margin-left:-130px;width:130px; height:18px; position:absolute;">
+                        <div class="handle orange-bar">&harr;
+                            <script>
+                                var opacityslider = new Dragdealer("oslider", {
+                                    x: 0.25,
+                                    steps: 5,
+                                    snap: true,
+                                    callback: function(a, b) {
+                                        lowopacity = 0.1 + 0.8 * a;
+                                        draw()
+                                    }
+                                });
+                            </script>
+                        </div>
+                    </div>
+                </div>
+            </div>
+			<div style="display:block;overflow: hidden;white-space: nowrap;"><span style="float:left;">Decimals:</span>
+                <div style="float:right;">
+                    <span>Nodes: <input type="text" value='0' id="ndec" style="width:28px"/></span>
+					<span>Links: <input type="text" value='2' id='ldec' style="width:28px"/></span>
+                </div>
+</div>
+			<div style="display:block;overflow: hidden;white-space: nowrap;">
+				<div>
+					<button onclick="draw()" style="width:100%; min-width:220px; margin-top:20px;margin-bottom:20px;font-size:20px;">Refresh graph</button>
+				</div>
+				<div style="margin-bottom:20px;display:block;overflow: hidden;white-space: nowrap;">
+				<span><button onclick="load()" style="width:45%; min-width:100px; float:left;">Load</button></span>
+				<span><button onclick="save()" style="width:45%; min-width:100px; float:right;">Save</button></span>
+				</div>
+				<div style="display:block;overflow: hidden;white-space: nowrap;">
+				<span><button onclick="addnode()" style="width:45%; min-width:100px; float:left;">Add new node</button></span>
+				<span><button onclick="removenode()" style="width:45%; min-width:100px; float:right;">Remove node</button></span>
+				</div>
+				<div class="likeform2" id="nodes-form">
+					<div>0&nbsp;<input type="text" value='{"name":"Oil"}'/></div>
+					<div>1&nbsp;<input type="text" value='{"name":"Natural Gas"}' /></div>
+					<div>2&nbsp;<input type="text" value='{"name":"Coal","fill":"seaGreen"}'/></div>
+					<div>3&nbsp;<input type="text" value='{"name":"Fossil Fuels","value":65,"layer":2}'/></div>
+					<div>4&nbsp;<input type="text" value='{"name":"Electricity","layer":2}'/></div>
+					<div>5&nbsp;<input type="text" value='{"name":"Energy","fill":"grey"}'/></div>
+				</div>
+			</div>
+			<div style="display:block;overflow: hidden;white-space: nowrap; margin-top:10px;">
+				<div style="display:block;overflow: hidden;white-space: nowrap;">
+				<span><button onclick="addlink()" style="width:45%; min-width:100px; float:left;">Add new link</button></span>
+				<span><button onclick="removelink()" style="width:45%; min-width:100px; float:right;">Remove link</button></span>
+				</div>
+				<div class="likeform" id="links-form" >
+					<div><input type="text" value='{"source":0,"target":3,"value":15,"fill":"blue"}'/></div>
+					<div><input type="text" value='{"source":1,"target":3,"value":20}'/></div>
+					<div><input type="text" value='{"source":2,"target":3,"value":25}'/></div>
+					<div><input type="text" value='{"source":2,"target":4,"value":25}'/></div>
+					<div><input type="text" value='{"source":3,"target":5,"value":60}'/></div>
+					<div><input type="text" value='{"source":4,"target":5,"value":25}'/></div>
+					<div><input type="text" value='{"source":4,"target":4,"value":5}'/></div>
+				</div>
+				<div style="display:block;overflow: hidden;white-space: nowrap; line-height:50px;">&nbsp;</div>
+			</div>
+			
+        </div>
+
+       
+        <!--SANKEY DIAGRAM-->
+
+        <div id="chart" style="z-index:5; position:fixed;"></div>
+
+        <!---------SCRIPTS----------->
+
+        <script src="js/sankey.js"></script>
+        <script src="js/food.js"></script>
+	
+    </div>
+	
+	</body>
+</html>
