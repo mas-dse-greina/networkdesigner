@@ -1,18 +1,17 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html lang="en">
 
 <head>
-    
     <script src="http://d3js.org/d3.v3.min.js"></script>
-    <script src="js/svgexport.js"></script>
-     <style>
+    
+    <style>
         #chart {
             font-size: 18px;
             padding-left: 20px;
-            padding-top: 10px;
-                       
+            padding-top: 100px;
         }
+
         #titlebar {
             width: calc(90%);
             height: 20px;
@@ -24,279 +23,56 @@
             position: fixed;
             z-index: 50;
         }
+        
+        #buttons {
+        position: fixed;
+        margin-top: 40px;
+        margin-left: 35px;
+        }
+
         .node rect {
             fill-opacity: .9;
             shape-rendering: crispEdges;
         }
+
         .node text {
             pointer-events: none;
         }
+
         .link {
             fill: none;
             stroke: #000;
-            stroke-opacity: .12;
+            stroke-opacity: .2;
         }
+
         .gradient-link {
             fill: none;
             stroke-opacity: .5;
         }
-        h1 {
-            font-size: 1.4rem;
-        }
+
+       
     </style>
 </head>
 
 <body>
-    
-    <div id="titlebar">
-        <span id="titletext" class="pagetitle">Intel Nervana Neural Network Designer</span>
-        <span id="titletext" class="pagetitle" style="positions:relative;float:right;right:30px;top:0px;"><a href="https://www.intelnervana.com/" target="_blank">Help</a>&nbsp;|
-         <span id="titletext" class="pagetitle"><a href="#" onclick="alert('Intel Nervana Neural Network Designer by Tony Reina;\nBased on the Sankey plugin for D3 by Mike Bostock (https://bost.ocks.org/mike/);\nMIT License, 2014.');">Cite</a></span>
+    <div class="networkDesigner">
+        <div id="titlebar">
+            <span id="titletext" class="pagetitle">Intel Nervana Neural Network Designer</span>
+            <span id="titletext" class="pagetitle" style="positions:relative;float:right;right:30px;top:0px;"><a href="https://www.intelnervana.com/" target="_blank">Help</a>&nbsp;|
+            <span id="titletext" class="pagetitle"><a href="#" onclick="alert('Intel Nervana Neural Network Designer by Tony Reina;\nBased on the Sankey plugin for D3 by Mike Bostock (https://bost.ocks.org/mike/);\nMIT License, 2014.');">Cite</a></span>
+        </div>
+        <div id="buttons">
+            <input name="saveButton" type="button" value="Save graph" onclick="saveGraphJSON()" />
+            <input name="addNode" type="button" value="Add node" onclick="addNode()" />
+        </div>
+        <div id="chart"></div>
     </div>
-    <br><br>
-    <div id="option">
-    <input name="saveButton" 
-           type="button" 
-           value="Save graph" 
-           onclick="save()" />
-    </div>
-
-    <div id="chart" style="positions:relative;float:left;" >
     
-    <script src="js/sankey.js"></script>
-    <script>
-        var margin = {
-                top: 0,
-                right: 100,
-                bottom: 150,
-                left: 0
-            },
-            width = window.innerWidth - margin.left - margin.right,
-            height = window.innerHeight - margin.top - margin.bottom;
-            
-
-        var formatNumber = d3.format(",.2f"),
-            format = function(d) {
-                return formatNumber(d);
-            },
-            color = d3.scale.category20();
-
-        var svg = d3.select("#chart").append("svg")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
-            .append("g")
-            
-
-        var sankey = d3.sankey()
-            .nodeWidth(36)
-            .nodePadding(50)
-            .size([width, height]);
-
-        var path = sankey.link();
-
-        d3.json("network.json", function(network) {
-
-            sankey
-                .nodes(network.nodes)
-                .links(network.links)
-                .layout(32);
-
-            function setDash(d) {
-                var d3this = d3.select(this);
-                var totalLength = d3this.node().getTotalLength();
-                d3this
-                    .attr('stroke-dasharray', totalLength + ' ' + totalLength)
-                    .attr('stroke-dashoffset', totalLength)
-            }
-
-            function branchAnimate(nodeData) {
-                    var links = svg.selectAll(".gradient-link")
-                        .filter(function(gradientD) {
-                            return nodeData.sourceLinks.indexOf(gradientD) > -1
-                        });
-                    var nextLayerNodeData = [];
-                    links.each(function(d) {
-                        nextLayerNodeData.push(d.target);
-                    });
-
-                    links
-                        .style("opacity", null)
-                        .transition()
-                        .duration(400)
-                        .ease('linear')
-                        .attr('stroke-dashoffset', 0)
-                        .each("end", function() {
-                            nextLayerNodeData.forEach(function(d) {
-                                branchAnimate(d);
-                            });
-                        });
-                } //end branchAnimate
-
-            var gradientLink = svg.append("g").selectAll(".gradient-link")
-                .data(network.links)
-                .enter().append("path")
-                .attr("class", "gradient-link")
-                .attr("d", path)
-                .style("stroke-width", function(d) {
-                    return Math.max(1, d.dy);
-                })
-                .sort(function(a, b) {
-                    return b.dy - a.dy;
-                })
-                .each(setDash)
-                .style('stroke', function(d) {
-                    var sourceColor = color(d.source.name.replace(/ .*/, "")).replace("#", "");
-                    var targetColor = color(d.target.name.replace(/ .*/, "")).replace("#", "");
-                    var id = 'c-' + sourceColor + '-to-' + targetColor;
-                    if (!svg.select(id)[0][0]) {
-                        //append the gradient def
-                        //append a gradient
-                        var gradient = svg.append('defs')
-                            .append('linearGradient')
-                            .attr('id', id)
-                            .attr('x1', '0%')
-                            .attr('y1', '0%')
-                            .attr('x2', '100%')
-                            .attr('y2', '0%')
-                            .attr('spreadMethod', 'pad');
-
-                        gradient.append('stop')
-                            .attr('offset', '0%')
-                            .attr('stop-color', "#" + sourceColor)
-                            .attr('stop-opacity', 1);
-
-                        gradient.append('stop')
-                            .attr('offset', '100%')
-                            .attr('stop-color', "#" + targetColor)
-                            .attr('stop-opacity', 1);
-                    }
-                    return "url(#" + id + ")";
-                });
-
-            var link = svg.append("g").selectAll(".link")
-                .data(network.links)
-                .enter().append("path")
-                .attr("class", "link")
-                .attr("d", path)
-                .style("stroke-width", function(d) {
-                    return Math.max(1, d.dy);
-                })
-                .sort(function(a, b) {
-                    return b.dy - a.dy;
-                });
-
-            link.append("title")
-                .text(function(d) {
-                    return d.source.name + " : " + d.target.name + "\n" + format(d.value);
-                });
-
-
-            var node = svg.append("g").selectAll(".node")
-                .data(network.nodes)
-                .enter().append("g")
-                .attr("class", "node")
-                .attr("transform", function(d) {
-                    return "translate(" + d.x + "," + d.y + ")";
-                })
-                .on("mouseover", branchAnimate)
-                .on("mouseout", function() {
-                    //cancel all transitions by making a new one
-                    gradientLink.transition();
-                    gradientLink
-                        .style("opacity", 0)
-                        .each(function(d) {
-                            setDash.call(this, d);
-                        });
-                })
-                .call(d3.behavior.drag()
-                    .origin(function(d) {
-                        return d;
-                    })
-                    .on("dragstart", function() {
-                        this.parentNode.appendChild(this);
-                    })
-                    .on("drag", dragmove))
-                .on("dblclick", function(d) {
-			svg.selectAll(".link").filter(function(l) {
-				return l.target == d;
-			}).attr("display", function() {
-				if (d3.select(this).attr("display") == "none") return "inline"
-				else return "none"
-})});
-                 
-            
-            node.append("rect")
-                .attr("height", function(d) {
-                    return d.dy;
-                })
-                .attr("width", sankey.nodeWidth())
-                .style("fill", function(d) {
-                    return d.color = color(d.name.replace(/ .*/, ""));
-                })
-                .append("title")
-                .text(function(d) {
-                    return d.name + "\n=======" + "\n# inputs = " + (d.targetLinks.length) + "\n# outputs = " + (d.sourceLinks.length) + "\nWeight = " + format(d.value);
-                })
-                
-               
-            node.append("text") //node
-                .attr("x", function(i) {
-                    return -i.dy / 2
-                })
-                .attr("y", function(i) {
-                    return i.dx / 2 + 9
-                })
-                .attr("transform", "rotate(270)").attr("text-anchor", "middle").attr("font-size", "23px").text(function(i) {
-                    return i.name;
-                })
-                .attr("stroke", function(d) {
-                    return d3.rgb(d["color"]).darker(2)
-                }).attr("stroke-width", "1px");
-
-
-            // the function for moving the nodes
-            function dragmove(d) {
-            
-             if(d3.event.sourceEvent.button == 0){ // If left mouse button
-                d3.select(this).attr("transform",
-                    "translate(" + (
-                        d.x = Math.max(0, Math.min(width - d.dx, d3.event.x))
-                    ) + "," + (
-                        d.y = Math.max(0, Math.min(height - d.dy, d3.event.y))
-                    ) + ")");
-
-                link.attr("d", path);
-                gradientLink.attr("d", path);
-                sankey.relayout();
-                }
-            }
-           
-
-        });
-        
-        
-        function save(){
-        
-        txt = '{\n"nodes":[\n';
-        
-			d3.selectAll("g.node").each(function(d) {
-				txt += '{"node":' + d.node + ', "name":"' + d.name + '"},\n'
-			})
-			txt = txt.substring(0, txt.length - 2); // strip last ,
-			txt += '\n],\n"links": [\n'
-			
-			d3.selectAll(".link").each(function(d) {
-				txt += '{"source":' + d.source.node + ', "target":' 
-				+ d.target.node + ',"value":' + d.value + '},\n'
-			})	
-			txt = txt.substring(0, txt.length - 2); // strip last ,
-			txt += '\n]}'
-			
-			console.log(txt);	
-			};
-
-    </script>
+    <!-- Sankey diagram helper code -->
+    <script type="text/javascript" src="js/sankey.js"></script>
     
+    <!-- Code for graphing the network -->
+    <script type="text/javascript" src="networkDesigner.js"></script>
 </body>
 
 </html>
